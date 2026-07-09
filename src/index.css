@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 0%;
+    --radius: 0.75rem;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    height: 100%;
+    scroll-padding-bottom: 45vh;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Poppins', system-ui, sans-serif;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overflow-x: hidden;
+    min-height: 100%;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+  }
+
+  input, select, textarea, [contenteditable='true'] {
+    scroll-margin-top: 6rem;
+    scroll-margin-bottom: 45vh;
+  }
+
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer components {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .keyboard-safe-sheet {
+    max-height: min(92dvh, calc(var(--visual-viewport-height, 100dvh) - 0.75rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+  }
+
+  .keyboard-safe-page {
+    min-height: var(--visual-viewport-height, 100dvh);
+    overflow-y: auto;
+    padding-bottom: max(calc(var(--keyboard-inset, 0px) + 1rem), env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
