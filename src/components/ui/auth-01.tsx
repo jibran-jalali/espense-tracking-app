@@ -80,7 +80,7 @@ export function Auth1({
           <div className="bg-background h-full w-full rounded-3xl px-2 py-6 shadow-[0_2px_4px_0px_rgba(0,0,0,0.12)]">
             <CardHeader className="space-y-3 pb-4 text-center">
               <div className="flex justify-center mb-2">
-                <img src="/icons/logo_192.png" alt="FinTrack" className="h-14 w-14" />
+                <img src="/icons/logo_full.png" alt="FinTrack" className="h-20 w-auto max-w-[240px] object-contain" />
               </div>
               <div className="space-y-1">
                 <CardTitle className="text-xl font-extrabold tracking-tight sm:text-2xl">

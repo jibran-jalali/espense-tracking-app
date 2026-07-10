@@ -17,9 +17,9 @@ export function AppLayout() {
     <div className="mx-auto min-h-screen max-w-lg bg-white">
       <header className="safe-top sticky top-0 z-40 border-b border-black/10 bg-white/95 backdrop-blur-lg">
         <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <img src="/icons/logo_192.png" alt="" className="h-8 w-8" />
-            <h1 className="text-lg font-bold text-black">{title}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/icons/logo_full.png" alt="FinTrack" className="h-8 w-auto max-w-[140px] object-contain" />
+            {title !== 'FinTrack' && <h1 className="truncate text-lg font-bold text-black">{title}</h1>}
           </div>
         </div>
       </header>
