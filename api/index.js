@@ -8,7 +8,8 @@ const { google } = require('googleapis')
 
 const app = express()
 const JWT_SECRET = process.env.JWT_SECRET || 'flowly-jwt-secret-change-in-production'
-const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-maverick-17b-128e-instruct'
+const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct'
+const GROQ_VISION_FALLBACK_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173')
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${FRONTEND_URL}/api/admin/google/callback`
 const CALENDAR_OWNER_EMAIL = 'k245620@nu.edu.pk'
@@ -478,9 +479,7 @@ app.post('/api/ocr', requireGroq, async (req, res) => {
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
     const mimeType = image.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png'
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_VISION_MODEL,
-      messages: [{
+    const messages = [{
         role: 'user',
         content: [
           {
@@ -510,10 +509,22 @@ Rules:
           },
           { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
         ],
-      }],
+      }]
+
+    const createCompletion = (model) => groq.chat.completions.create({
+      model,
+      messages,
       temperature: 0.1,
       max_tokens: 1024,
     })
+
+    let completion
+    try {
+      completion = await createCompletion(GROQ_VISION_MODEL)
+    } catch (error) {
+      if (error?.code !== 'model_not_found' || GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL) throw error
+      completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
+    }
 
     const content = completion.choices[0]?.message?.content || ''
     const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
