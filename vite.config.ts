@@ -13,7 +13,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.png', '*.png'],
+      includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Flowly - Finance Tracker',
         short_name: 'Flowly',
@@ -24,8 +24,8 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '/',
         icons: [
-          { src: 'logo icon.png', sizes: '192x192', type: 'image/png' },
-          { src: 'logo icon.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/logo_192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/logo_512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
     }),
