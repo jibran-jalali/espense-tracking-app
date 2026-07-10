@@ -15,8 +15,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'Flowly - Finance Tracker',
-        short_name: 'Flowly',
+        name: 'FinTrack - Finance Tracker',
+        short_name: 'FinTrack',
         description: 'Track your expenses intelligently',
         theme_color: '#059669',
         background_color: '#ffffff',

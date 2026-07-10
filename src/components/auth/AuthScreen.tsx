@@ -61,7 +61,7 @@ export function AuthScreen() {
 
   return (
     <Auth1
-      heading="Welcome to Flowly"
+      heading="Welcome to FinTrack"
       subheading="Track your expenses, manage finances, and gain insights."
       submitLabel="Sign In"
       bottomPromptText="Don't have an account?"

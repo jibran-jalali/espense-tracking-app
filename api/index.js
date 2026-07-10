@@ -112,6 +112,37 @@ function requireGroq(req, res, next) {
   next()
 }
 
+function buildLocalAnalyticsRecommendation(rows) {
+  const total = rows.reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0)
+  const categories = new Map()
+  const people = new Map()
+
+  rows.forEach((tx) => {
+    const person = tx.person_name || 'Unassigned'
+    people.set(person, (people.get(person) || 0) + Number(tx.total_amount || 0))
+    ;(tx.items || []).forEach((item) => {
+      const category = item.category || 'Other'
+      categories.set(category, (categories.get(category) || 0) + Number(item.amount || 0))
+    })
+  })
+
+  const topCategory = [...categories.entries()].sort((a, b) => b[1] - a[1])[0]
+  const topPerson = [...people.entries()].sort((a, b) => b[1] - a[1])[0]
+  const average = rows.length ? Math.round(total / rows.length) : 0
+  const suggestions = []
+
+  if (topCategory) suggestions.push(`Watch ${topCategory[0]} spending first; it is your largest category at PKR ${Math.round(topCategory[1]).toLocaleString()}.`)
+  if (topPerson && topPerson[0] !== 'Unassigned') suggestions.push(`Review ${topPerson[0]}'s expenses; they account for PKR ${Math.round(topPerson[1]).toLocaleString()}.`)
+  if (average) suggestions.push(`Your average transaction is PKR ${average.toLocaleString()}; keep impulse buys below that number.`)
+  suggestions.push('Scan every receipt this week so category totals stay accurate.')
+
+  return {
+    headline: topCategory ? `${topCategory[0]} leads` : 'Spending insight',
+    summary: `Analyzed ${rows.length} recent transactions worth PKR ${Math.round(total).toLocaleString()}.`,
+    suggestions: suggestions.slice(0, 3),
+  }
+}
+
 // ─── Auth Routes ───────────────────────────────────────────────────────────
 
 app.post('/api/auth/signup', async (req, res) => {
@@ -307,7 +338,7 @@ app.delete('/api/transactions/:id', authMiddleware, async (req, res) => {
   res.json({ success: true })
 })
 
-app.get('/api/analytics/recommendation', authMiddleware, requireGroq, async (req, res) => {
+app.get('/api/analytics/recommendation', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT t.merchant, t.date, t.total_amount,
@@ -331,27 +362,35 @@ app.get('/api/analytics/recommendation', authMiddleware, requireGroq, async (req
     if (result.rows.length === 0) {
       return res.json({
         headline: 'Start with tracking',
-        summary: 'Add a few expenses first so Flowly can find your spending pattern.',
+        summary: 'Add a few expenses first so FinTrack can find your spending pattern.',
         suggestions: ['Scan receipts for one week.', 'Assign each expense to a person.', 'Review this tab after 5-10 transactions.'],
       })
     }
 
-    const compact = result.rows.map((tx) => ({ date: tx.date, merchant: tx.merchant || 'Expense', person: tx.person_name || 'None', total: Number(tx.total_amount || 0), items: tx.items }))
-    const completion = await groq.chat.completions.create({
-      model: GROQ_TEXT_MODEL,
-      temperature: 0.25,
-      max_tokens: 420,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: 'You are a concise finance coach for Flowly. Return only valid JSON.' },
-        { role: 'user', content: `Analyze this PKR spending data and return JSON: {"headline":"2-5 words","summary":"one short sentence","suggestions":["specific suggestion 1","specific suggestion 2","specific suggestion 3"]}. Keep suggestions practical and short. Data: ${JSON.stringify(compact)}` },
-      ],
-    })
-    const content = completion.choices[0]?.message?.content || '{}'
-    const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('AI suggestions were not returned as JSON')
-    const parsed = JSON.parse(jsonMatch[0])
-    res.json({ headline: String(parsed.headline || 'Spending insight'), summary: String(parsed.summary || 'Review your biggest categories and reduce repeat small purchases.'), suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3).map(String) : [] })
+    const fallback = buildLocalAnalyticsRecommendation(result.rows)
+    if (!groq) return res.json(fallback)
+
+    try {
+      const compact = result.rows.map((tx) => ({ date: tx.date, merchant: tx.merchant || 'Expense', person: tx.person_name || 'None', total: Number(tx.total_amount || 0), items: tx.items }))
+      const completion = await groq.chat.completions.create({
+        model: GROQ_TEXT_MODEL,
+        temperature: 0.25,
+        max_tokens: 420,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: 'You are a concise finance coach for FinTrack. Return only valid JSON.' },
+          { role: 'user', content: `Analyze this PKR spending data and return JSON: {"headline":"2-5 words","summary":"one short sentence","suggestions":["specific suggestion 1","specific suggestion 2","specific suggestion 3"]}. Keep suggestions practical and short. Data: ${JSON.stringify(compact)}` },
+        ],
+      })
+      const content = completion.choices[0]?.message?.content || '{}'
+      const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+      if (!jsonMatch) throw new Error('AI suggestions were not returned as JSON')
+      const parsed = JSON.parse(jsonMatch[0])
+      return res.json({ headline: String(parsed.headline || fallback.headline), summary: String(parsed.summary || fallback.summary), suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3).map(String) : fallback.suggestions })
+    } catch (error) {
+      console.error('Groq analytics recommendation fallback:', error)
+      return res.json(fallback)
+    }
   } catch (error) {
     console.error('Analytics recommendation error:', error)
     res.status(500).json({ error: error.message || 'Failed to generate suggestions' })
@@ -621,6 +660,6 @@ module.exports = app
 if (require.main === module) {
   const PORT = process.env.PORT || 3001
   app.listen(PORT, () => {
-    console.log(`Flowly API running on port ${PORT}`)
+    console.log(`FinTrack API running on port ${PORT}`)
   })
 }

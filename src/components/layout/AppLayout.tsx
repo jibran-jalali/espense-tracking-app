@@ -11,7 +11,7 @@ const pageTitles: Record<string, string> = {
 
 export function AppLayout() {
   const location = useLocation()
-  const title = pageTitles[location.pathname] || 'Flowly'
+  const title = pageTitles[location.pathname] || 'FinTrack'
 
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-white">
