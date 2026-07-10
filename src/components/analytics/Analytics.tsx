@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { Transaction } from '../../types'
+import { analyticsApi } from '../../lib/api'
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { ContinuousTabs } from '../ui/continuous-tabs'
 
@@ -8,10 +9,20 @@ interface AnalyticsProps {
   transactions: Transaction[]
 }
 
-type ViewType = 'category' | 'person' | 'monthly' | 'yearly'
+type ViewType = 'category' | 'person' | 'monthly' | 'yearly' | 'ai'
+
+type AiRecommendation = {
+  headline: string
+  summary: string
+  suggestions: string[]
+}
 
 export function Analytics({ transactions }: AnalyticsProps) {
   const [view, setView] = useState<ViewType>('category')
+  const [aiRecommendation, setAiRecommendation] = useState<AiRecommendation | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiLoaded, setAiLoaded] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   const categoryData = useMemo(() => {
     const map: Record<string, { name: string; value: number; color: string; icon: string }> = {}
@@ -87,9 +98,36 @@ export function Analytics({ transactions }: AnalyticsProps) {
     { key: 'person', label: 'Person' },
     { key: 'monthly', label: 'Monthly' },
     { key: 'yearly', label: 'Yearly' },
+    { key: 'ai', label: 'AI' },
   ]
 
   const COLORS = ['#00D1FF', '#7C3AED', '#FF4D8D', '#FFB703', '#00C853', '#FF6B35', '#3B82F6', '#E11D48', '#14B8A6', '#A855F7']
+
+  useEffect(() => {
+    if (view !== 'ai' || aiLoaded || aiLoading) return
+
+    let cancelled = false
+    setAiLoading(true)
+    setAiError(null)
+
+    analyticsApi.recommendation()
+      .then((data) => {
+        if (!cancelled) setAiRecommendation(data)
+      })
+      .catch((error) => {
+        if (!cancelled) setAiError(error.message || 'Failed to load AI insight')
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAiLoading(false)
+          setAiLoaded(true)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [view, aiLoaded, aiLoading])
 
   return (
     <div className="space-y-5">
@@ -226,6 +264,18 @@ export function Analytics({ transactions }: AnalyticsProps) {
             <p className="py-8 text-center text-sm text-gray-400">No data yet</p>
           )
         )}
+
+        {view === 'ai' && (
+          <AiPanel
+            recommendation={aiRecommendation}
+            loading={aiLoading}
+            error={aiError}
+            onRetry={() => {
+              setAiLoaded(false)
+              setAiError(null)
+            }}
+          />
+        )}
       </div>
     </div>
   )
@@ -243,5 +293,86 @@ function InsightCard({ label, value, color }: { label: string; value: string; co
         <p className="mt-1 truncate text-sm font-black text-black">{value}</p>
       </div>
     </div>
+  )
+}
+
+function AiPanel({
+  recommendation,
+  loading,
+  error,
+  onRetry,
+}: {
+  recommendation: AiRecommendation | null
+  loading: boolean
+  error: string | null
+  onRetry: () => void
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-4 py-2">
+        <div className="h-24 animate-pulse rounded-2xl bg-black/5" />
+        <div className="space-y-2">
+          <div className="h-10 animate-pulse rounded-xl bg-black/5" />
+          <div className="h-10 animate-pulse rounded-xl bg-black/5" />
+          <div className="h-10 animate-pulse rounded-xl bg-black/5" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-center">
+        <p className="text-sm font-bold text-red-700">AI insight unavailable</p>
+        <p className="mt-1 text-xs text-red-500">{error}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 rounded-full bg-black px-4 py-2 text-xs font-bold text-white"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+
+  if (!recommendation) {
+    return <p className="py-8 text-center text-sm text-gray-400">Open this tab to generate an AI insight</p>
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="space-y-4"
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-black p-4 text-white">
+        <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-[#00D1FF]/70" />
+        <div className="absolute -bottom-10 left-10 h-24 w-24 rounded-full bg-[#FF4D8D]/60" />
+        <div className="relative">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">AI Coach</p>
+          <h3 className="mt-2 text-xl font-black">{recommendation.headline}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-white/70">{recommendation.summary}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {recommendation.suggestions.map((suggestion, index) => (
+          <motion.div
+            key={`${suggestion}-${index}`}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.06, duration: 0.28 }}
+            className="flex gap-3 rounded-2xl border border-black/10 bg-white p-3"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FFB703]/20 text-xs font-black text-black">
+              {index + 1}
+            </span>
+            <p className="text-sm font-medium leading-relaxed text-black/70">{suggestion}</p>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
   )
 }

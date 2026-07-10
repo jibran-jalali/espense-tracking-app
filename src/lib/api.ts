@@ -83,6 +83,15 @@ export const transactionsApi = {
   remove: (id: string) => request(`/transactions/${id}`, { method: 'DELETE' }),
 }
 
+// Analytics
+export const analyticsApi = {
+  recommendation: () => request('/analytics/recommendation') as Promise<{
+    headline: string
+    summary: string
+    suggestions: string[]
+  }>,
+}
+
 // Admin / Google Calendar
 export const adminApi = {
   googleStatus: () => request('/admin/google/status'),

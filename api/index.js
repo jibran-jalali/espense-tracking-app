@@ -10,6 +10,7 @@ const app = express()
 const JWT_SECRET = process.env.JWT_SECRET || 'flowly-jwt-secret-change-in-production'
 const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b'
 const GROQ_VISION_FALLBACK_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
+const GROQ_TEXT_MODEL = process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile'
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173')
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${FRONTEND_URL}/api/admin/google/callback`
 const CALENDAR_OWNER_EMAIL = 'k245620@nu.edu.pk'
@@ -304,6 +305,57 @@ app.post('/api/transactions', authMiddleware, async (req, res) => {
 app.delete('/api/transactions/:id', authMiddleware, async (req, res) => {
   await pool.query('DELETE FROM transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.userId])
   res.json({ success: true })
+})
+
+app.get('/api/analytics/recommendation', authMiddleware, requireGroq, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.merchant, t.date, t.total_amount,
+              p.name AS person_name,
+              COALESCE(
+                json_agg(json_build_object('description', ti.description, 'amount', ti.amount, 'category', c.name))
+                FILTER (WHERE ti.id IS NOT NULL),
+                '[]'
+              ) AS items
+       FROM transactions t
+       LEFT JOIN people p ON p.id = t.person_id
+       LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
+       LEFT JOIN categories c ON c.id = ti.category_id
+       WHERE t.user_id = $1
+       GROUP BY t.id, p.id
+       ORDER BY t.date DESC, t.created_at DESC
+       LIMIT 60`,
+      [req.userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.json({
+        headline: 'Start with tracking',
+        summary: 'Add a few expenses first so Flowly can find your spending pattern.',
+        suggestions: ['Scan receipts for one week.', 'Assign each expense to a person.', 'Review this tab after 5-10 transactions.'],
+      })
+    }
+
+    const compact = result.rows.map((tx) => ({ date: tx.date, merchant: tx.merchant || 'Expense', person: tx.person_name || 'None', total: Number(tx.total_amount || 0), items: tx.items }))
+    const completion = await groq.chat.completions.create({
+      model: GROQ_TEXT_MODEL,
+      temperature: 0.25,
+      max_tokens: 420,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You are a concise finance coach for Flowly. Return only valid JSON.' },
+        { role: 'user', content: `Analyze this PKR spending data and return JSON: {"headline":"2-5 words","summary":"one short sentence","suggestions":["specific suggestion 1","specific suggestion 2","specific suggestion 3"]}. Keep suggestions practical and short. Data: ${JSON.stringify(compact)}` },
+      ],
+    })
+    const content = completion.choices[0]?.message?.content || '{}'
+    const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('AI suggestions were not returned as JSON')
+    const parsed = JSON.parse(jsonMatch[0])
+    res.json({ headline: String(parsed.headline || 'Spending insight'), summary: String(parsed.summary || 'Review your biggest categories and reduce repeat small purchases.'), suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3).map(String) : [] })
+  } catch (error) {
+    console.error('Analytics recommendation error:', error)
+    res.status(500).json({ error: error.message || 'Failed to generate suggestions' })
+  }
 })
 
 // ─── Admin: Assign Work / Google Calendar ──────────────────────────────────
