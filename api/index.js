@@ -8,7 +8,7 @@ const { google } = require('googleapis')
 
 const app = express()
 const JWT_SECRET = process.env.JWT_SECRET || 'flowly-jwt-secret-change-in-production'
-const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct'
+const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-maverick-17b-128e-instruct'
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173')
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${FRONTEND_URL}/api/admin/google/callback`
 const CALENDAR_OWNER_EMAIL = 'k245620@nu.edu.pk'
