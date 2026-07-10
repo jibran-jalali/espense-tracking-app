@@ -565,20 +565,28 @@ app.post('/api/ocr', async (req, res) => {
         content: [
           {
             type: 'text',
-            text: `Analyze this receipt and extract JSON (ONLY valid JSON, no markdown):
+            text: `You are a strict receipt OCR extraction engine. Read any printed or handwritten receipt photo, including tilted, crumpled, faded, non-English, grocery, restaurant, fuel, pharmacy, utility, and retail receipts.
+
+Return ONLY valid JSON. No markdown. No explanation.
 
 {
-  "merchant": "store name",
+  "merchant": "store or vendor name, blank if unknown",
   "date": "YYYY-MM-DD",
-  "total_amount": 0.00,
+  "total_amount": 0,
   "items": [
-    { "description": "item", "amount": 0.00, "category": "best category" }
+    { "description": "item name", "amount": 0, "category": "one exact category from the list" }
   ]
 }
 
-Date default: ${new Date().toISOString().split('T')[0]}
-Categories: Food & Dining, Transportation, Shopping, Bills & Utilities, Entertainment, Healthcare, Education, Groceries, Rent, Other
-Amounts in PKR. Split multi-item receipts with separate categories.`,
+Rules:
+- Date default if unreadable: ${new Date().toISOString().split('T')[0]}
+- Categories must be one of: Food & Dining, Transportation, Shopping, Bills & Utilities, Entertainment, Healthcare, Education, Groceries, Rent, Other
+- Amounts must be numbers only, no currency symbols or commas.
+- total_amount must be the final payable total, not subtotal, not change, not cash tendered.
+- Extract line items when visible. Ignore invoice numbers, tax IDs, phone numbers, discounts as items unless they affect final total.
+- If line items are unreadable, return one item using the final total with description "Receipt total".
+- If receipt has taxes/service charges, include them as separate items only when visible.
+- Prefer PKR interpretation but do not invent numbers.`,
           },
           { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
         ],
@@ -588,10 +596,27 @@ Amounts in PKR. Split multi-item receipts with separate categories.`,
     })
 
     const content = completion.choices[0]?.message?.content || ''
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
     if (!jsonMatch) return res.status(500).json({ error: 'No JSON in AI response', raw: content })
 
-    res.json(JSON.parse(jsonMatch[0]))
+    const parsed = JSON.parse(jsonMatch[0])
+    const items = Array.isArray(parsed.items) ? parsed.items : []
+    const normalizedItems = items
+      .map((item) => ({
+        description: String(item.description || 'Receipt item').trim(),
+        amount: Number(String(item.amount || 0).replace(/[^0-9.-]/g, '')) || 0,
+        category: String(item.category || 'Other').trim(),
+      }))
+      .filter((item) => item.amount > 0)
+    const itemTotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0)
+    const total = Number(String(parsed.total_amount || 0).replace(/[^0-9.-]/g, '')) || itemTotal
+
+    res.json({
+      merchant: String(parsed.merchant || '').trim(),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(parsed.date || '')) ? parsed.date : new Date().toISOString().split('T')[0],
+      total_amount: total,
+      items: normalizedItems.length > 0 ? normalizedItems : [{ description: 'Receipt total', amount: total, category: 'Other' }],
+    })
   } catch (error) {
     console.error('OCR Error:', error)
     res.status(500).json({ error: error.message || 'OCR processing failed' })

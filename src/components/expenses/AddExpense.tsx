@@ -29,6 +29,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
   const [showOCR, setShowOCR] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scanMessage, setScanMessage] = useState<string | null>(null)
 
   const totalAmount = items.reduce((sum, item) => sum + (item.amount || 0), 0)
   const personOptions = people.map((person) => ({
@@ -57,21 +58,42 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
   }
 
   const handleOCRResult = (result: OCRResult) => {
-    setMerchant(result.merchant)
+    const scannedItems = Array.isArray(result.items) ? result.items : []
+    const validItems = scannedItems
+      .map((item) => ({
+        description: item.description?.trim() || 'Receipt item',
+        amount: Number(item.amount || 0),
+        category: item.category,
+      }))
+      .filter((item) => Number.isFinite(item.amount) && item.amount > 0)
+    const receiptTotal = Number(result.total_amount || 0)
+
+    setMerchant(result.merchant?.trim() || 'Receipt')
     if (result.date) setDate(result.date)
-    if (result.items.length > 0) {
-      const mappedItems = result.items.map((item) => {
-        const matchedCat = categories.find(
-          (c) => item.category && c.name.toLowerCase().includes(item.category!.toLowerCase())
-        )
-        return {
-          categoryId: matchedCat?.id || categories[0]?.id || '',
-          description: item.description,
-          amount: item.amount,
-        }
+
+    const mappedItems = validItems.map((item) => ({
+      categoryId: matchCategory(item.category, item.description, categories)?.id || categories[0]?.id || '',
+      description: item.description,
+      amount: item.amount,
+    }))
+
+    const detectedTotal = mappedItems.reduce((sum, item) => sum + item.amount, 0)
+    if (receiptTotal > 0 && mappedItems.length === 0) {
+      mappedItems.push({
+        categoryId: matchCategory(undefined, result.merchant || 'Receipt total', categories)?.id || categories[0]?.id || '',
+        description: result.merchant ? `${result.merchant} receipt` : 'Receipt total',
+        amount: receiptTotal,
       })
-      setItems(mappedItems)
+    } else if (receiptTotal > detectedTotal + 1) {
+      mappedItems.push({
+        categoryId: categories.find((category) => category.name.toLowerCase() === 'other')?.id || categories[0]?.id || '',
+        description: 'Receipt balance / tax',
+        amount: Number((receiptTotal - detectedTotal).toFixed(2)),
+      })
     }
+
+    if (mappedItems.length > 0) setItems(mappedItems)
+    setScanMessage(`Receipt scanned: ${mappedItems.length || validItems.length} item${(mappedItems.length || validItems.length) === 1 ? '' : 's'} filled`)
     setShowOCR(false)
   }
 
@@ -245,6 +267,11 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
             </div>
 
             {error && <p className="text-center text-sm font-medium text-red-500">{error}</p>}
+            {scanMessage && !error && (
+              <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-700">
+                {scanMessage}
+              </p>
+            )}
 
             <div className="flex gap-3 pt-2">
               <button
@@ -267,4 +294,44 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
       </motion.div>
     </motion.div>
   )
+}
+
+function normalizeText(value?: string) {
+  return (value || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function matchCategory(categoryName: string | undefined, description: string, categories: Category[]) {
+  const categoryText = normalizeText(categoryName)
+  const descriptionText = normalizeText(description)
+  const combined = `${categoryText} ${descriptionText}`.trim()
+
+  const exact = categories.find((category) => normalizeText(category.name) === categoryText)
+  if (exact) return exact
+
+  const includes = categories.find((category) => {
+    const name = normalizeText(category.name)
+    return categoryText.includes(name) || name.includes(categoryText) || descriptionText.includes(name)
+  })
+  if (includes) return includes
+
+  const rules: Record<string, string[]> = {
+    'Food & Dining': ['restaurant', 'food', 'cafe', 'coffee', 'pizza', 'burger', 'tea', 'meal', 'dining', 'bakery', 'kfc', 'mcdonald', 'domino'],
+    Groceries: ['grocery', 'supermarket', 'milk', 'bread', 'egg', 'rice', 'flour', 'fruit', 'vegetable', 'mart', 'store'],
+    Transportation: ['fuel', 'petrol', 'diesel', 'uber', 'careem', 'taxi', 'bus', 'train', 'parking', 'transport'],
+    Shopping: ['clothes', 'shirt', 'shoes', 'shopping', 'retail', 'mall', 'garment'],
+    'Bills & Utilities': ['bill', 'electric', 'gas', 'water', 'internet', 'phone', 'utility', 'wifi'],
+    Healthcare: ['pharmacy', 'medical', 'doctor', 'hospital', 'medicine', 'clinic'],
+    Entertainment: ['cinema', 'movie', 'game', 'netflix', 'spotify', 'entertainment'],
+    Education: ['book', 'school', 'college', 'university', 'course', 'stationery'],
+    Rent: ['rent'],
+  }
+
+  for (const [category, words] of Object.entries(rules)) {
+    if (words.some((word) => combined.includes(word))) {
+      const match = categories.find((item) => item.name.toLowerCase() === category.toLowerCase())
+      if (match) return match
+    }
+  }
+
+  return categories.find((category) => category.name.toLowerCase() === 'other') || categories[0]
 }

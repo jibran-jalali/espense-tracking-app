@@ -15,6 +15,7 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
   const [processing, setProcessing] = useState(false)
   const [scanDone, setScanDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState('Take a clear photo of the full receipt')
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const processImage = async (targetImage?: string) => {
@@ -24,12 +25,16 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
     setProcessing(true)
     setScanDone(false)
     setError(null)
+    setStatus('Reading receipt details...')
 
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 35000)
     try {
       const res = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: imageToProcess }),
+        signal: controller.signal,
       })
 
       const text = await res.text()
@@ -46,11 +51,15 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
       if (!res.ok) throw new Error(data.error || 'OCR failed')
 
       setScanDone(true)
+      setStatus('Receipt detected. Filling the form...')
       onResult(data as OCRResult)
     } catch (err: any) {
-      setError(err.message || 'Failed to process image')
+      setError(err.name === 'AbortError' ? 'Scanning took too long. Try a clearer, closer receipt photo.' : err.message || 'Failed to process image')
+      setStatus('Try a brighter, flatter photo with the full receipt visible')
+    } finally {
+      window.clearTimeout(timeout)
+      setProcessing(false)
     }
-    setProcessing(false)
   }
 
   const handleFile = useCallback((file?: File) => {
@@ -58,13 +67,16 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
 
     setError(null)
     setScanDone(false)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const nextImage = e.target?.result as string
+    setStatus('Preparing image...')
+    resizeReceiptImage(file)
+      .then((nextImage) => {
       setImage(nextImage)
       processImage(nextImage)
-    }
-    reader.readAsDataURL(file)
+      })
+      .catch(() => {
+        setError('Could not read this image. Try another photo.')
+        setStatus('Try a JPG or PNG receipt photo')
+      })
   }, [])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -98,8 +110,9 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
 
       <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
         <p className="mb-3 text-center text-sm font-semibold text-gray-700">
-          Scan receipt with AI
+          Smart receipt scan
         </p>
+        <p className="mb-3 text-center text-xs font-medium text-gray-400">{status}</p>
         <RunActionButton
           idleLabel="Open Camera"
           doneLabel="Receipt Ready"
@@ -125,7 +138,7 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
           <p className="text-sm font-medium text-gray-600">
             {isDragActive ? 'Drop receipt here' : 'Or tap here to upload receipt'}
           </p>
-          <p className="mt-1 text-xs text-gray-400">PNG, JPG up to 10MB</p>
+          <p className="mt-1 text-xs text-gray-400">Full receipt, bright light, JPG/PNG up to 10MB</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -166,4 +179,30 @@ export function OCRUpload({ onResult, onBack }: OCRUploadProps) {
       )}
     </div>
   )
+}
+
+function resizeReceiptImage(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = reject
+      img.onload = () => {
+        const maxSide = 1600
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+        const width = Math.max(1, Math.round(img.width * scale))
+        const height = Math.max(1, Math.round(img.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        if (!context) return reject(new Error('Canvas unavailable'))
+        context.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.86))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
 }
