@@ -31,7 +31,7 @@ export function Combobox1({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, maxHeight: 192 })
 
   const selected = options.find((option) => option.value === value)
   const filteredOptions = useMemo(() => {
@@ -51,10 +51,22 @@ export function Combobox1({
     const rect = buttonRef.current?.getBoundingClientRect()
     if (!rect) return
 
+    const viewport = window.visualViewport
+    const viewportTop = viewport?.offsetTop || 0
+    const viewportHeight = viewport?.height || window.innerHeight
+    const viewportBottom = viewportTop + viewportHeight
+    const gap = 6
+    const preferredHeight = 236
+    const spaceBelow = viewportBottom - rect.bottom - gap - 12
+    const spaceAbove = rect.top - viewportTop - gap - 12
+    const opensAbove = spaceBelow < 180 && spaceAbove > spaceBelow
+    const maxHeight = Math.max(140, Math.min(preferredHeight, opensAbove ? spaceAbove : spaceBelow))
+
     setPosition({
-      top: rect.bottom + 6,
+      top: opensAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
       left: rect.left,
       width: rect.width,
+      maxHeight,
     })
   }
 
@@ -64,10 +76,14 @@ export function Combobox1({
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
+    window.visualViewport?.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('scroll', updatePosition)
 
     return () => {
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
+      window.visualViewport?.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
   }, [open])
 
@@ -83,7 +99,7 @@ export function Combobox1({
           updatePosition()
           setOpen((current) => !current)
         }}
-        className="flex h-10 w-full items-center justify-between rounded-xl border border-border/60 bg-background px-3 text-left text-sm shadow-xs outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex h-10 w-full touch-manipulation items-center justify-between rounded-xl border border-border/60 bg-background px-3 text-left text-sm shadow-xs outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className={selected ? 'truncate text-foreground' : 'truncate text-muted-foreground'}>
           {selected?.label || placeholder}
@@ -102,7 +118,7 @@ export function Combobox1({
           />
           <div
             className="fixed z-[60] overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl shadow-black/10"
-            style={{ top: position.top, left: position.left, width: position.width }}
+            style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
           >
             <div className="flex h-9 items-center gap-2 border-b border-black/10 px-3">
               <SearchIcon className="size-4 text-muted-foreground" />
@@ -111,11 +127,10 @@ export function Combobox1({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
                 className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                autoFocus
               />
             </div>
 
-            <div className="max-h-48 overflow-y-auto p-1">
+            <div className="overflow-y-auto p-1" style={{ maxHeight: Math.max(96, position.maxHeight - 36) }}>
               {filteredOptions.length === 0 ? (
                 <div className="px-3 py-3 text-sm text-muted-foreground">{emptyText}</div>
               ) : (
