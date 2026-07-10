@@ -189,17 +189,33 @@ function resizeReceiptImage(file: File) {
       const img = new Image()
       img.onerror = reject
       img.onload = () => {
-        const maxSide = 1600
-        const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
-        const width = Math.max(1, Math.round(img.width * scale))
-        const height = Math.max(1, Math.round(img.height * scale))
         const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
         const context = canvas.getContext('2d')
         if (!context) return reject(new Error('Canvas unavailable'))
-        context.drawImage(img, 0, 0, width, height)
-        resolve(canvas.toDataURL('image/jpeg', 0.86))
+
+        const attempts = [
+          { maxSide: 1280, quality: 0.72 },
+          { maxSide: 1100, quality: 0.64 },
+          { maxSide: 900, quality: 0.58 },
+          { maxSide: 760, quality: 0.52 },
+        ]
+
+        for (const attempt of attempts) {
+          const scale = Math.min(1, attempt.maxSide / Math.max(img.width, img.height))
+          const width = Math.max(1, Math.round(img.width * scale))
+          const height = Math.max(1, Math.round(img.height * scale))
+          canvas.width = width
+          canvas.height = height
+          context.clearRect(0, 0, width, height)
+          context.drawImage(img, 0, 0, width, height)
+
+          const dataUrl = canvas.toDataURL('image/jpeg', attempt.quality)
+          // Keep the JSON request comfortably below Vercel's serverless body limit.
+          if (dataUrl.length < 2_800_000 || attempt === attempts[attempts.length - 1]) {
+            resolve(dataUrl)
+            return
+          }
+        }
       }
       img.src = String(reader.result)
     }
