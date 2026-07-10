@@ -90,7 +90,6 @@ function AddExpensePage() {
         categories={categories}
         onSubmit={async (data) => {
           await add(data)
-          navigate('/expenses')
         }}
         onClose={() => navigate(-1)}
       />

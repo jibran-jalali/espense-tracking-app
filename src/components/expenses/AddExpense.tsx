@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { HiX, HiPlus, HiTrash } from 'react-icons/hi'
+import { HiX, HiPlus, HiTrash, HiCheckCircle } from 'react-icons/hi'
 import { BsReceipt } from 'react-icons/bs'
 import { Person, Category, OCRResult } from '../../types'
 import { OCRUpload } from './OCRUpload'
@@ -29,6 +29,8 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
   const [items, setItems] = useState([{ categoryId: '', description: '', amount: 0 }])
   const [showOCR, setShowOCR] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success'>('idle')
+  const [formKey, setFormKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [scanMessage, setScanMessage] = useState<string | null>(null)
 
@@ -56,6 +58,17 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
     const newItems = [...items]
     newItems[index] = { ...newItems[index], [field]: value }
     setItems(newItems)
+  }
+
+  const resetForm = () => {
+    setPersonId('')
+    setMerchant('')
+    setDate(new Date().toISOString().split('T')[0])
+    setNotes('')
+    setItems([{ categoryId: '', description: '', amount: 0 }])
+    setError(null)
+    setScanMessage(null)
+    setFormKey((key) => key + 1)
   }
 
   const handleOCRResult = (result: OCRResult) => {
@@ -100,10 +113,14 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitting) return
+
     setError(null)
+    setSaveState('saving')
 
     if (items.length === 0 || items.every((i) => !i.amount)) {
       setError('Add at least one item with an amount')
+      setSaveState('idle')
       return
     }
 
@@ -123,9 +140,15 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
             amount: i.amount,
           })),
       })
-      onClose()
+      setSaveState('success')
+      playSuccessSound()
+      window.setTimeout(() => {
+        resetForm()
+        setSaveState('idle')
+      }, 850)
     } catch {
       setError('Failed to save. Try again.')
+      setSaveState('idle')
     }
     setSubmitting(false)
   }
@@ -143,7 +166,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={smoothSpring}
-        className="keyboard-safe-sheet safe-bottom w-full transform-gpu rounded-t-3xl bg-white px-5 pt-5 shadow-2xl shadow-black/20 will-change-transform"
+        className="keyboard-safe-sheet safe-bottom relative w-full transform-gpu rounded-t-3xl bg-white px-5 pt-5 shadow-2xl shadow-black/20 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -156,7 +179,14 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
         {showOCR ? (
           <OCRUpload onResult={handleOCRResult} onBack={() => setShowOCR(false)} />
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <motion.form
+            key={formKey}
+            onSubmit={handleSubmit}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={smoothEase}
+            className="space-y-4"
+          >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex-1">
                 <label className="mb-1.5 block text-xs font-semibold text-gray-500 uppercase tracking-wide">Person</label>
@@ -285,17 +315,75 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || saveState === 'success'}
                 className="flex-1 rounded-2xl bg-black px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-60"
               >
-                {submitting ? 'Saving...' : `Save PKR ${totalAmount.toLocaleString()}`}
+                {saveState === 'success' ? 'Added' : submitting ? 'Adding...' : `Save PKR ${totalAmount.toLocaleString()}`}
               </button>
             </div>
-          </form>
+          </motion.form>
         )}
+
+        <AnimatePresence>
+          {saveState !== 'idle' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -10 }}
+              transition={smoothSpring}
+              className="pointer-events-none absolute inset-x-5 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-20 rounded-[2rem] border border-black/10 bg-white p-4 shadow-2xl shadow-black/20"
+            >
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={saveState === 'saving' ? { rotate: 360 } : { rotate: 0, scale: [1, 1.12, 1] }}
+                  transition={saveState === 'saving' ? { repeat: Infinity, duration: 0.8, ease: 'linear' } : { duration: 0.38 }}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full ${saveState === 'success' ? 'bg-emerald-500' : 'bg-black'}`}
+                >
+                  {saveState === 'success' ? <HiCheckCircle className="h-7 w-7 text-white" /> : <BsReceipt className="h-6 w-6 text-white" />}
+                </motion.div>
+                <div>
+                  <p className="text-sm font-black text-black">{saveState === 'success' ? 'Expense added' : 'Adding expense'}</p>
+                  <p className="text-xs font-semibold text-black/45">
+                    {saveState === 'success' ? 'Ready for the next expense' : 'Saving your transaction now'}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   )
+}
+
+function playSuccessSound() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextClass) return
+    const context = new AudioContextClass()
+    const now = context.currentTime
+    const gain = context.createGain()
+    gain.connect(context.destination)
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28)
+
+    const first = context.createOscillator()
+    first.type = 'sine'
+    first.frequency.setValueAtTime(660, now)
+    first.connect(gain)
+    first.start(now)
+    first.stop(now + 0.12)
+
+    const second = context.createOscillator()
+    second.type = 'sine'
+    second.frequency.setValueAtTime(880, now + 0.09)
+    second.connect(gain)
+    second.start(now + 0.09)
+    second.stop(now + 0.28)
+
+    window.setTimeout(() => context.close(), 450)
+  } catch {}
 }
 
 function normalizeText(value?: string) {
