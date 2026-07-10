@@ -143,6 +143,43 @@ function buildLocalAnalyticsRecommendation(rows) {
   }
 }
 
+const RECEIPT_CATEGORIES = ['Food & Dining', 'Transportation', 'Shopping', 'Bills & Utilities', 'Entertainment', 'Healthcare', 'Education', 'Groceries', 'Rent', 'Other']
+
+const RECEIPT_CATEGORY_RULES = [
+  ['Transportation', ['fuel', 'petrol', 'diesel', 'gasoline', 'cng', 'uber', 'careem', 'taxi', 'bus', 'train', 'parking', 'toll', 'pso', 'shell', 'caltex', 'parco']],
+  ['Healthcare', ['pharmacy', 'medical', 'medicine', 'clinic', 'hospital', 'doctor', 'dawai', 'tablet', 'capsule', 'syrup']],
+  ['Bills & Utilities', ['bill', 'utility', 'electric', 'electricity', 'gas bill', 'water', 'internet', 'wifi', 'phone', 'ptcl', 'wapda', 'k-electric', 'lesco', 'jazz', 'zong', 'ufone', 'telenor']],
+  ['Food & Dining', ['restaurant', 'cafe', 'coffee', 'tea', 'pizza', 'burger', 'biryani', 'meal', 'dining', 'bakery', 'kfc', 'mcdonald', 'domino', 'foodpanda', 'sandwich', 'chicken', 'fries']],
+  ['Groceries', ['grocery', 'supermarket', 'hypermarket', 'mart', 'milk', 'bread', 'egg', 'rice', 'flour', 'sugar', 'oil', 'fruit', 'vegetable', 'meat', 'chicken', 'beef', 'soap', 'detergent', 'shampoo', 'imtiaz', 'naheed', 'carrefour', 'metro', 'alfatah', 'chase']],
+  ['Shopping', ['shopping', 'retail', 'mall', 'daraz', 'clothes', 'shirt', 'shoe', 'shoes', 'garment', 'fashion', 'electronics', 'mobile', 'accessory']],
+  ['Education', ['school', 'college', 'university', 'book', 'course', 'stationery', 'tuition', 'academy']],
+  ['Entertainment', ['cinema', 'movie', 'game', 'netflix', 'spotify', 'youtube', 'entertainment', 'ticket']],
+  ['Rent', ['rent', 'rental']],
+]
+
+function normalizeReceiptText(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function classifyReceiptCategory(rawCategory, description, merchant) {
+  const exact = RECEIPT_CATEGORIES.find((category) => normalizeReceiptText(category) === normalizeReceiptText(rawCategory))
+  if (exact && exact !== 'Other') return exact
+
+  const text = normalizeReceiptText(`${description} ${merchant} ${rawCategory}`)
+  let bestCategory = 'Other'
+  let bestScore = 0
+
+  for (const [category, keywords] of RECEIPT_CATEGORY_RULES) {
+    const score = keywords.reduce((sum, keyword) => sum + (text.includes(keyword) ? 1 : 0), 0)
+    if (score > bestScore) {
+      bestCategory = category
+      bestScore = score
+    }
+  }
+
+  return bestScore > 0 ? bestCategory : exact || 'Other'
+}
+
 // ─── Auth Routes ───────────────────────────────────────────────────────────
 
 app.post('/api/auth/signup', async (req, res) => {
@@ -641,21 +678,22 @@ Rules:
 
     const parsed = JSON.parse(jsonMatch[0])
     const items = Array.isArray(parsed.items) ? parsed.items : []
+    const merchant = String(parsed.merchant || '').trim()
     const normalizedItems = items
       .map((item) => ({
         description: String(item.description || 'Receipt item').trim(),
         amount: Number(String(item.amount || 0).replace(/[^0-9.-]/g, '')) || 0,
-        category: String(item.category || 'Other').trim(),
+        category: classifyReceiptCategory(item.category, item.description, merchant),
       }))
       .filter((item) => item.amount > 0)
     const itemTotal = normalizedItems.reduce((sum, item) => sum + item.amount, 0)
     const total = Number(String(parsed.total_amount || 0).replace(/[^0-9.-]/g, '')) || itemTotal
 
     res.json({
-      merchant: String(parsed.merchant || '').trim(),
+      merchant,
       date: /^\d{4}-\d{2}-\d{2}$/.test(String(parsed.date || '')) ? parsed.date : new Date().toISOString().split('T')[0],
       total_amount: total,
-      items: normalizedItems.length > 0 ? normalizedItems : [{ description: 'Receipt total', amount: total, category: 'Other' }],
+      items: normalizedItems.length > 0 ? normalizedItems : [{ description: 'Receipt total', amount: total, category: classifyReceiptCategory(parsed.category, 'Receipt total', merchant) }],
     })
   } catch (error) {
     console.error('OCR Error:', error)
