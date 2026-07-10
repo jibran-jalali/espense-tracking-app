@@ -516,6 +516,7 @@ Rules:
       messages,
       temperature: 0.1,
       max_tokens: 1024,
+      response_format: { type: 'json_object' },
     })
 
     let completion
@@ -526,8 +527,15 @@ Rules:
       completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
     }
 
-    const content = completion.choices[0]?.message?.content || ''
-    const jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+    let content = completion.choices[0]?.message?.content || ''
+    let jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+
+    if (!jsonMatch && GROQ_VISION_MODEL !== GROQ_VISION_FALLBACK_MODEL) {
+      completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
+      content = completion.choices[0]?.message?.content || ''
+      jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+    }
+
     if (!jsonMatch) return res.status(500).json({ error: 'No JSON in AI response', raw: content })
 
     const parsed = JSON.parse(jsonMatch[0])
