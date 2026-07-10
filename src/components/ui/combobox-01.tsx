@@ -16,6 +16,7 @@ type Combobox1Props = {
   emptyText?: string
   ariaLabel?: string
   className?: string
+  searchable?: boolean
 }
 
 export function Combobox1({
@@ -27,6 +28,7 @@ export function Combobox1({
   emptyText = 'No option found.',
   ariaLabel = 'Combobox',
   className = '',
+  searchable = true,
 }: Combobox1Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -36,11 +38,11 @@ export function Combobox1({
   const selected = options.find((option) => option.value === value)
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    if (!normalizedQuery) return options
+    if (!searchable || !normalizedQuery) return options
     return options.filter((option) =>
       `${option.label} ${option.helper || ''}`.toLowerCase().includes(normalizedQuery)
     )
-  }, [options, query])
+  }, [options, query, searchable])
 
   const close = () => {
     setOpen(false)
@@ -120,17 +122,19 @@ export function Combobox1({
             className="fixed z-[60] overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl shadow-black/10"
             style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
           >
-            <div className="flex h-9 items-center gap-2 border-b border-black/10 px-3">
-              <SearchIcon className="size-4 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </div>
+            {searchable && (
+              <div className="flex h-9 items-center gap-2 border-b border-black/10 px-3">
+                <SearchIcon className="size-4 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+            )}
 
-            <div className="overflow-y-auto p-1" style={{ maxHeight: Math.max(96, position.maxHeight - 36) }}>
+            <div className="overflow-y-auto p-1" style={{ maxHeight: Math.max(96, position.maxHeight - (searchable ? 36 : 0)) }}>
               {filteredOptions.length === 0 ? (
                 <div className="px-3 py-3 text-sm text-muted-foreground">{emptyText}</div>
               ) : (

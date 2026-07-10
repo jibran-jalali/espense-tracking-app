@@ -168,6 +168,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
                   searchPlaceholder="Search people..."
                   emptyText="No person found. Add people first."
                   ariaLabel="Person combobox"
+                  searchable={false}
                 />
               </div>
               <div className="flex-1">
