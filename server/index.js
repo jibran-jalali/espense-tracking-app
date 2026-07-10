@@ -694,32 +694,42 @@ Rules:
         ],
       }]
 
-    const createCompletion = (model) => groq.chat.completions.create({
+    const createCompletion = (model, strictJson = true) => groq.chat.completions.create({
       model,
       messages,
-      temperature: 0.1,
+      temperature: 0,
       max_tokens: 1024,
-      response_format: { type: 'json_object' },
+      ...(strictJson ? { response_format: { type: 'json_object' } } : {}),
     })
 
-    let completion
-    try {
-      completion = await createCompletion(GROQ_VISION_MODEL)
-    } catch (error) {
-      if (!['model_not_found', 'invalid_request_error'].includes(error?.code) || GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL) throw error
-      completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
+    const attempts = [
+      { model: GROQ_VISION_MODEL, strictJson: true },
+      ...(GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL ? [] : [{ model: GROQ_VISION_FALLBACK_MODEL, strictJson: true }]),
+      { model: GROQ_VISION_MODEL, strictJson: false },
+      ...(GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL ? [] : [{ model: GROQ_VISION_FALLBACK_MODEL, strictJson: false }]),
+    ]
+
+    let content = ''
+    let jsonMatch = null
+    let lastError = null
+
+    for (const attempt of attempts) {
+      try {
+        const completion = await createCompletion(attempt.model, attempt.strictJson)
+        content = completion.choices[0]?.message?.content || ''
+        jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+        if (jsonMatch) break
+      } catch (error) {
+        lastError = error
+        const retryable = ['model_not_found', 'invalid_request_error', 'json_validate_failed'].includes(error?.code) || /validate JSON/i.test(error?.message || '')
+        if (!retryable) throw error
+      }
     }
 
-    let content = completion.choices[0]?.message?.content || ''
-    let jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
-
-    if (!jsonMatch && GROQ_VISION_MODEL !== GROQ_VISION_FALLBACK_MODEL) {
-      completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
-      content = completion.choices[0]?.message?.content || ''
-      jsonMatch = content.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      if (lastError) throw lastError
+      return res.status(500).json({ error: 'No JSON in AI response', raw: content })
     }
-
-    if (!jsonMatch) return res.status(500).json({ error: 'No JSON in AI response', raw: content })
 
     const parsed = JSON.parse(jsonMatch[0])
     const items = Array.isArray(parsed.items) ? parsed.items : []
