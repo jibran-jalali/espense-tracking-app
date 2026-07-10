@@ -149,7 +149,7 @@ export function Analytics({ transactions }: AnalyticsProps) {
         <InsightCard label="Top Person" value={topPerson?.name || 'None'} color="#7C3AED" />
       </div>
 
-      <div className="flex justify-center overflow-x-auto scrollbar-hide">
+      <div className="w-full overflow-x-auto scrollbar-hide px-1">
         <ContinuousTabs
           tabs={views.map((v) => ({ id: v.key, label: v.label }))}
           defaultActiveId={view}

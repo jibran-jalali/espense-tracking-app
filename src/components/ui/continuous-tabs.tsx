@@ -41,7 +41,7 @@ export const ContinuousTabs: FC<ContinuousTabsProps> = ({
 
   return (
     <LayoutGroup>
-      <nav className="theme-injected border-border bg-background shadow-[inset_0_-2px_4px_hsl(var(--foreground)/0.08),inset_0_1px_0_hsl(var(--background)/0.9),0_4px_12px_hsl(var(--foreground)/0.03)] relative flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border p-1 transition-all duration-300 sm:gap-1 sm:p-1.5">
+      <nav className="theme-injected border-border bg-background shadow-[inset_0_-2px_4px_hsl(var(--foreground)/0.08),inset_0_1px_0_hsl(var(--background)/0.9),0_4px_12px_hsl(var(--foreground)/0.03)] relative mx-auto flex w-max max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border p-1 transition-all duration-300 sm:gap-1 sm:p-1.5">
         {tabs.map((tab) => {
           const isActive = active === tab.id
 
@@ -49,7 +49,7 @@ export const ContinuousTabs: FC<ContinuousTabsProps> = ({
             <button
               key={tab.id}
               onClick={() => handleChange(tab.id)}
-              className="relative rounded-lg px-3 py-2 outline-none sm:px-5 sm:py-3"
+              className="relative shrink-0 rounded-lg px-2.5 py-2 outline-none sm:px-5 sm:py-3"
               type="button"
             >
               {isActive && (
