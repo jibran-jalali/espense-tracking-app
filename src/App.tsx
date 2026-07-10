@@ -10,7 +10,6 @@ import { AssignWork } from './pages/AssignWork'
 import { AddExpense } from './components/expenses/AddExpense'
 import { usePeople, useCategories, useTransactions } from './hooks/useExpenses'
 import { useEffect } from 'react'
-import { HiArrowLeft } from 'react-icons/hi'
 import { useNavigate } from 'react-router-dom'
 
 function useKeyboardSafeViewport() {
@@ -81,19 +80,14 @@ function AddExpensePage() {
   const { add } = useTransactions()
 
   return (
-    <div className="safe-top min-h-screen bg-white px-5 pt-4">
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-600">
-        <HiArrowLeft className="h-4 w-4" /> Back
-      </button>
-      <AddExpense
-        people={people}
-        categories={categories}
-        onSubmit={async (data) => {
-          await add(data)
-        }}
-        onClose={() => navigate(-1)}
-      />
-    </div>
+    <AddExpense
+      people={people}
+      categories={categories}
+      onSubmit={async (data) => {
+        await add(data)
+      }}
+      onClose={() => navigate(-1)}
+    />
   )
 }
 

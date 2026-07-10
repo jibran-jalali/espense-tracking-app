@@ -1,13 +1,7 @@
 import { useState } from 'react'
-import {
-  AnimatePresence,
-  motion,
-  MotionConfig,
-  type Transition,
-} from 'motion/react'
-import { ArrowRight, Trash2, X } from 'lucide-react'
-import useMeasure from 'react-use-measure'
-import { smoothEase, smoothSpring } from '../../lib/motion'
+import { AnimatePresence, motion } from 'motion/react'
+import { ArrowRight, CalendarDays, Clock, ReceiptText, Trash2, User, X } from 'lucide-react'
+import { smoothEase } from '../../lib/motion'
 
 export interface TransactionListItem {
   id: string
@@ -28,25 +22,6 @@ export interface TransactionListItem {
 
 const defaultAccentColor = '#6366f1'
 
-function colorWithAlpha(color: string | undefined, alpha: number) {
-  const fallback = defaultAccentColor
-  const hex = color?.trim().replace('#', '') || fallback.replace('#', '')
-  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return fallback
-
-  const red = parseInt(hex.slice(0, 2), 16)
-  const green = parseInt(hex.slice(2, 4), 16)
-  const blue = parseInt(hex.slice(4, 6), 16)
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
-}
-
-const springConfig: Transition = {
-  ...smoothSpring,
-}
-
-const opacityConfig: Transition = {
-  ...smoothEase,
-}
-
 export function TransactionList({
   transactions,
   title = 'Transactions',
@@ -57,65 +32,60 @@ export function TransactionList({
   onDelete?: (id: string) => void
 }) {
   const [open, setOpen] = useState<string | null>(null)
-  const [ref, bounds] = useMeasure()
 
   const selected = transactions.find((t) => t.id === open) ?? null
 
   return (
-    <MotionConfig transition={springConfig}>
-      <motion.div
-        className="theme-injected bg-muted border-border w-full overflow-hidden rounded-2xl border shadow-sm"
-        animate={{ height: bounds.height > 0 ? bounds.height : 'auto' }}
-        transition={smoothEase}
-      >
-        <div className="p-3" ref={ref}>
-          <AnimatePresence mode="popLayout">
-            {!open && (
-              <motion.div
-                key="collapsed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={opacityConfig}
-                className="flex w-full flex-col gap-2"
-              >
-                <span className="text-muted-foreground font-medium">
-                  {title}
-                </span>
+    <div className="theme-injected bg-muted border-border w-full overflow-hidden rounded-2xl border shadow-sm">
+      <div className="p-3">
+        <AnimatePresence mode="wait" initial={false}>
+          {!open && (
+            <motion.div
+              key="collapsed"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={smoothEase}
+              className="flex w-full flex-col gap-2"
+            >
+              <span className="text-muted-foreground font-medium">{title}</span>
 
-                {transactions.map((item) => (
-                  <TransactionItem
-                    key={item.id}
-                    data={item}
-                    onClick={() => setOpen(item.id)}
-                  />
-                ))}
-
-                <button className="text-foreground flex items-center justify-center gap-1 rounded-sm py-1">
-                  <p className="text-sm">Tap a transaction for details</p>
-                  <ArrowRight size={14} />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence mode="popLayout">
-            {selected && (
-              <motion.div exit={{ opacity: 0, transition: { duration: 0.1 } }}>
-                <TransactionItemExpanded
-                  data={selected}
-                  onClose={() => setOpen(null)}
-                  onDelete={onDelete ? () => {
-                    onDelete(selected.id)
-                    setOpen(null)
-                  } : undefined}
+              {transactions.map((item) => (
+                <TransactionItem
+                  key={item.id}
+                  data={item}
+                  onClick={() => setOpen(item.id)}
                 />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-    </MotionConfig>
+              ))}
+
+              <button className="text-foreground flex items-center justify-center gap-1 rounded-sm py-1">
+                <p className="text-sm">Tap a transaction for details</p>
+                <ArrowRight size={14} />
+              </button>
+            </motion.div>
+          )}
+
+          {selected && (
+            <motion.div
+              key="expanded"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={smoothEase}
+            >
+              <TransactionItemExpanded
+                data={selected}
+                onClose={() => setOpen(null)}
+                onDelete={onDelete ? () => {
+                  onDelete(selected.id)
+                  setOpen(null)
+                } : undefined}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   )
 }
 
@@ -130,40 +100,26 @@ function TransactionItem({
 
   return (
     <div className="flex w-full cursor-pointer gap-2 rounded-xl p-1 transition-colors hover:bg-background/70" onClick={onClick}>
-      <motion.div
-        className="flex size-10 shrink-0 transform-gpu items-center justify-center rounded-lg shadow-sm will-change-transform"
+      <div
+        className="flex size-10 shrink-0 items-center justify-center rounded-lg shadow-sm"
         style={{ backgroundColor: accentColor }}
-        layoutId={`icon-${data.id}`}
-        layout="position"
       >
         <div className="flex items-center justify-center">{data.icon}</div>
-      </motion.div>
-
-      <div className="flex min-w-0 flex-1 flex-col justify-center text-xs">
-        <motion.p
-          className="text-foreground truncate font-semibold"
-          layoutId={`name-${data.id}`}
-          layout="position"
-        >
-          {data.name}
-        </motion.p>
-
-        <motion.p
-          className="text-muted-foreground truncate"
-          layoutId={`category-${data.id}`}
-          layout="position"
-        >
-          {data.category}
-        </motion.p>
       </div>
 
-      <motion.p
-        className="text-muted-foreground flex items-center text-xs"
-        layoutId={`amount-${data.id}`}
-        layout="position"
-      >
+      <div className="flex min-w-0 flex-1 flex-col justify-center text-xs">
+        <p className="text-foreground truncate font-semibold">
+          {data.name}
+        </p>
+
+        <p className="text-muted-foreground truncate">
+          {data.category}
+        </p>
+      </div>
+
+      <p className="text-muted-foreground flex items-center text-xs">
         {data.amount}
-      </motion.p>
+      </p>
     </div>
   )
 }
@@ -178,142 +134,93 @@ function TransactionItemExpanded({
   onDelete?: () => void
 }) {
   const accentColor = data.accentColor || defaultAccentColor
+  const person = data.details?.find((detail) => detail.label === 'Person')?.value
+  const notes = data.details?.find((detail) => detail.label === 'Notes')?.value
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div
-        className="rounded-2xl border p-3"
-        style={{
-          borderColor: colorWithAlpha(accentColor, 0.22),
-          background: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.18)}, ${colorWithAlpha(accentColor, 0.04)})`,
-        }}
-      >
-        <div className="flex justify-between">
-          <motion.div
-            className="flex size-11 transform-gpu items-center justify-center rounded-xl shadow-sm will-change-transform"
-            style={{ backgroundColor: accentColor }}
-            layoutId={`icon-${data.id}`}
-            layout="position"
-          >
-            {data.icon}
-          </motion.div>
-
-          <div className="flex items-center gap-2">
-            {onDelete && (
-              <button
-                className="flex cursor-pointer items-center justify-center self-start rounded-full bg-red-50 p-2 text-red-500 shadow-sm"
-                onClick={onDelete}
-                type="button"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            )}
-            <button
-              className="flex cursor-pointer items-center justify-center self-start rounded-full bg-white/85 p-2 shadow-sm"
-              onClick={onClose}
-              type="button"
-            >
-              <X className="text-foreground size-4" />
-            </button>
-          </div>
+    <div className="rounded-2xl bg-background p-4 shadow-sm">
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Transaction</p>
+          <h3 className="mt-1 truncate text-xl font-black text-foreground">{data.name}</h3>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{data.category}</p>
         </div>
-
-        <div className="mt-4 flex justify-between gap-4">
-          <div className="min-w-0">
-            <motion.p
-              className="text-foreground truncate font-semibold"
-              layoutId={`name-${data.id}`}
-              layout="position"
+        <div className="flex shrink-0 items-center gap-2">
+          {onDelete && (
+            <button
+              className="flex size-9 items-center justify-center rounded-full bg-red-50 text-red-500 transition-colors active:bg-red-100"
+              onClick={onDelete}
+              type="button"
+              aria-label="Delete transaction"
             >
-              {data.name}
-            </motion.p>
-
-            <motion.p
-              className="text-muted-foreground text-sm"
-              layoutId={`category-${data.id}`}
-              layout="position"
-            >
-              {data.category}
-            </motion.p>
-          </div>
-
-          <motion.p
-            layoutId={`amount-${data.id}`}
-            className="shrink-0 rounded-full bg-white px-3 py-1.5 font-bold text-foreground shadow-sm"
-            layout="position"
+              <Trash2 className="size-4" />
+            </button>
+          )}
+          <button
+            className="flex size-9 items-center justify-center rounded-full bg-black/5 text-foreground transition-colors active:bg-black/10"
+            onClick={onClose}
+            type="button"
+            aria-label="Close transaction details"
           >
-            {data.amount}
-          </motion.p>
+            <X className="size-4" />
+          </button>
         </div>
       </div>
 
-      <motion.div
-        className="flex flex-col gap-2 text-xs"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{
-          ...opacityConfig,
-          delay: 0.1,
-        }}
-      >
-        <div className="border-border border border-dashed" />
+      <div className="mb-5 rounded-2xl border border-black/10 bg-black px-4 py-4 text-white">
+        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Total</p>
+        <p className="mt-1 text-3xl font-black tracking-tight">{data.amount}</p>
+        <p className="mt-2 text-xs font-medium text-white/50">#{data.transactionId}</p>
+      </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: 'ID', value: `#${data.transactionId}` },
-            { label: 'Date', value: data.date },
-            { label: 'Time', value: data.time },
-          ].map((item) => (
-            <div
-              className="rounded-xl border p-2"
-              style={{
-                borderColor: colorWithAlpha(accentColor, 0.16),
-                backgroundColor: colorWithAlpha(accentColor, 0.08),
-              }}
-              key={item.label}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{item.label}</p>
-              <p className="mt-1 truncate font-semibold text-foreground">{item.value}</p>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 gap-2 text-sm">
+        <DetailRow icon={<CalendarDays className="size-4" />} label="Date" value={data.date} />
+        <DetailRow icon={<Clock className="size-4" />} label="Time" value={data.time} />
+        {person && <DetailRow icon={<User className="size-4" />} label="Person" value={person} />}
+        <DetailRow icon={<ReceiptText className="size-4" />} label="Source" value={data.paymentMethod} />
+      </div>
 
-        {data.details?.map((detail) => (
-          <p className="text-muted-foreground" key={detail.label}>
-            {detail.label}: <span className="text-foreground font-medium">{detail.value}</span>
-          </p>
-        ))}
-
-        {data.lineItems && data.lineItems.length > 0 && (
-          <div className="space-y-2 rounded-xl bg-background/70 p-2">
+      {data.lineItems && data.lineItems.length > 0 && (
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Items</p>
+          <div className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10">
             {data.lineItems.map((item, index) => (
-              <div className="flex items-start justify-between gap-3" key={`${item.label}-${index}`}>
+              <div className="flex items-start justify-between gap-3 bg-white px-3 py-3" key={`${item.label}-${index}`}>
                 <div className="flex min-w-0 gap-2">
                   <span
-                    className="mt-1 size-2 shrink-0 rounded-full"
+                    className="mt-1.5 size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: item.categoryColor || accentColor }}
                   />
                   <div className="min-w-0">
-                  <p className="text-foreground truncate font-medium">{item.label}</p>
-                  {item.category && <p className="text-muted-foreground">{item.category}</p>}
+                    <p className="truncate text-sm font-semibold text-foreground">{item.label}</p>
+                    {item.category && <p className="truncate text-xs text-muted-foreground">{item.category}</p>}
                   </div>
                 </div>
-                <p className="text-foreground shrink-0 font-semibold">{item.amount}</p>
+                <p className="shrink-0 text-sm font-bold text-foreground">{item.amount}</p>
               </div>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="border-border border border-dashed" />
-        <p className="text-muted-foreground">Paid Via {data.paymentMethod}</p>
-        <p className="text-muted-foreground">
-          {data.cardNumber}{' '}
-          <span className="text-foreground font-bold uppercase italic">
-            {data.cardType}
-          </span>
-        </p>
-      </motion.div>
+      {notes && (
+        <div className="mt-5 rounded-2xl bg-black/5 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Notes</p>
+          <p className="mt-1 text-sm font-medium text-foreground">{notes}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-black/5 px-3 py-3">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
+      </div>
+      <p className="min-w-0 truncate text-right text-sm font-semibold text-foreground">{value}</p>
     </div>
   )
 }

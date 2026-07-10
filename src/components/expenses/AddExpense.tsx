@@ -5,7 +5,7 @@ import { BsReceipt } from 'react-icons/bs'
 import { Person, Category, OCRResult } from '../../types'
 import { OCRUpload } from './OCRUpload'
 import { Combobox1 } from '../ui/combobox-01'
-import { smoothEase, smoothSpring } from '../../lib/motion'
+import { smoothEase } from '../../lib/motion'
 
 interface AddExpenseProps {
   people: Person[]
@@ -158,6 +158,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
       className="fixed inset-0 z-50 flex items-end bg-black/30"
       onClick={onClose}
     >
@@ -165,7 +166,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={smoothSpring}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="keyboard-safe-sheet safe-bottom relative w-full transform-gpu rounded-t-3xl bg-white px-5 pt-5 shadow-2xl shadow-black/20 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
@@ -182,8 +183,8 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
           <motion.form
             key={formKey}
             onSubmit={handleSubmit}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={smoothEase}
             className="space-y-4"
           >
@@ -330,7 +331,7 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
               initial={{ opacity: 0, scale: 0.92, y: 14 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: -10 }}
-              transition={smoothSpring}
+              transition={smoothEase}
               className="pointer-events-none absolute inset-x-5 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-20 rounded-[2rem] border border-black/10 bg-white p-4 shadow-2xl shadow-black/20"
             >
               <div className="flex items-center gap-3">
