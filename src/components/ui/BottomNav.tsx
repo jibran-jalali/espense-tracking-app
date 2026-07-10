@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { HiHome, HiChartBar, HiPlusCircle, HiUser } from 'react-icons/hi'
 import { BsReceipt } from 'react-icons/bs'
+import { smoothSpring } from '../../lib/motion'
 
 const tabs = [
   { path: '/dashboard', label: 'Home', icon: HiHome },
@@ -46,7 +47,7 @@ export function BottomNav() {
                 <motion.div
                   layoutId="nav-indicator"
                   className="absolute -top-2 h-1 w-8 rounded-full bg-black"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  transition={smoothSpring}
                 />
               )}
               <Icon

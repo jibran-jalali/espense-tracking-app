@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaBell } from 'react-icons/fa6'
+import { smoothSpring } from '../../lib/motion'
 
 interface MorphingButtonProps {
   buttonText?: string
@@ -55,12 +56,7 @@ export const MorphingButton: React.FC<MorphingButtonProps> = ({
     }
   }
 
-  const springConfig = {
-    type: 'spring',
-    stiffness: 240,
-    damping: 18,
-    mass: 1.1,
-  } as const
+  const springConfig = smoothSpring
 
   const isSoft = variant === 'soft'
   const radiusClass = isSoft ? 'rounded-full' : 'rounded-lg'
@@ -137,9 +133,9 @@ export const MorphingButton: React.FC<MorphingButtonProps> = ({
                   key="bell-icon"
                   layout
                   className="origin-right"
-                  initial={{ opacity: 0, scale: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 0, filter: 'blur(4px)' }}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
                   transition={springConfig}
                 >
                   {icon || <FaBell className={`${fallbackIconClass} ${isSoft ? 'text-black' : 'text-primary-foreground'}`} />}

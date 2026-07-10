@@ -7,6 +7,7 @@ import { FaInbox } from 'react-icons/fa6'
 import { RiBubbleChartFill } from 'react-icons/ri'
 import { BsFileTextFill, BsSendFill, BsTagFill } from 'react-icons/bs'
 import { TbClockHour12Filled } from 'react-icons/tb'
+import { smoothSpring } from '../../lib/motion'
 
 function AnimatedText({ text, className, delayStep = 0.014 }: { text: string; className?: string; delayStep?: number }) {
   const chars = text.split('')
@@ -18,17 +19,17 @@ function AnimatedText({ text, className, delayStep = 0.014 }: { text: string; cl
           {chars.map((char, i) => (
             <motion.span
               key={i}
-              initial={{ y: 10, opacity: 0, scale: 0.5, filter: 'blur(2px)' }}
-              animate={{ y: 0, opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ y: -10, opacity: 0, scale: 0.5, filter: 'blur(2px)' }}
+              initial={{ y: 8, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -8, opacity: 0, scale: 0.96 }}
               transition={{
                 type: 'spring',
-                stiffness: 240,
-                damping: 16,
-                mass: 1.2,
+                stiffness: 320,
+                damping: 30,
+                mass: 0.7,
                 delay: i * delayStep,
               }}
-              style={{ display: 'inline-block', whiteSpace: char === ' ' ? 'pre' : undefined }}
+              style={{ display: 'inline-block', whiteSpace: char === ' ' ? 'pre' : undefined, willChange: 'transform, opacity' }}
             >
               {char}
             </motion.span>
@@ -41,8 +42,8 @@ function AnimatedText({ text, className, delayStep = 0.014 }: { text: string; cl
 
 const spring: Transition = {
   type: 'spring',
-  stiffness: 260,
-  damping: 22,
+  stiffness: 280,
+  damping: 34,
   mass: 0.8,
 }
 
@@ -120,7 +121,7 @@ export function RunActionButton({
         initial={{ width: 220 }}
         animate={{ width: widths[status] }}
         transition={spring}
-        className={`relative flex h-[58px] max-w-full items-center justify-between overflow-hidden rounded-full ${
+        className={`relative flex h-[58px] max-w-full transform-gpu items-center justify-between overflow-hidden rounded-full will-change-[width] ${
           status === 'running'
             ? 'border-2 border-dashed border-[#D6D6DD]'
             : 'border-2 border-transparent'
@@ -131,9 +132,9 @@ export function RunActionButton({
             <motion.button
               key="idle"
               onClick={startAction}
-              initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
               transition={spring}
               className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#F4F4F9] px-5 py-3 whitespace-nowrap"
             >
@@ -145,9 +146,9 @@ export function RunActionButton({
           {status === 'running' && (
             <motion.div
               key="running"
-              initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
               transition={spring}
               className="flex flex-1 items-center justify-between gap-2 px-3 whitespace-nowrap"
             >
@@ -155,9 +156,9 @@ export function RunActionButton({
                 <AnimatePresence mode="popLayout">
                   <motion.div
                     key={currentStep}
-                    initial={{ opacity: 0, scale: 0, filter: 'blur(4px)' }}
-                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, scale: 0, filter: 'blur(4px)' }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
                     transition={spring}
                   >
                     {React.createElement(steps[currentStep].icon, {
@@ -173,9 +174,9 @@ export function RunActionButton({
 
               <motion.button
                 onClick={() => { reset(); onCancel?.() }}
-                initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ ...spring, delay: 0.15 }}
                 className="ml-1 rounded-full bg-[#D6D5E2] p-1.5"
               >
@@ -188,9 +189,9 @@ export function RunActionButton({
             <motion.button
               key="done"
               onClick={reset}
-              initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
               transition={spring}
               className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#EAF9EA] px-5 py-3 whitespace-nowrap"
             >

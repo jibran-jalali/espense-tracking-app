@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { HiX, HiTrash } from 'react-icons/hi'
 import { Person } from '../../types'
 import { MorphingButton } from '../ui/MorphingButton'
+import { smoothEase, smoothSpring } from '../../lib/motion'
 
 interface ManagePeopleProps {
   people: Person[]
@@ -21,6 +22,7 @@ export function ManagePeople({ people, onAdd, onRemove, onClose }: ManagePeopleP
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={smoothEase}
       className="fixed inset-0 z-[100] flex items-end bg-black/30"
       onClick={onClose}
     >
@@ -28,8 +30,8 @@ export function ManagePeople({ people, onAdd, onRemove, onClose }: ManagePeopleP
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="keyboard-safe-sheet safe-bottom w-full rounded-t-3xl bg-white px-5 pt-5"
+        transition={smoothSpring}
+        className="keyboard-safe-sheet safe-bottom w-full transform-gpu rounded-t-3xl bg-white px-5 pt-5 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -73,6 +75,7 @@ export function ManagePeople({ people, onAdd, onRemove, onClose }: ManagePeopleP
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
+                    transition={smoothEase}
                     className="flex items-center justify-between rounded-xl px-3 py-2.5 hover:bg-gray-50"
                   >
                     <div className="flex min-w-0 items-center gap-3">

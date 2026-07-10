@@ -7,6 +7,7 @@ import {
 } from 'motion/react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { smoothSpring } from '@/lib/motion'
 
 interface InlineActionProps {
   label: string
@@ -44,12 +45,7 @@ export const InlineAction: React.FC<InlineActionProps> = ({
     return () => window.clearTimeout(timer)
   }, [status])
 
-  const springTransition: Transition = {
-    type: 'spring',
-    stiffness: 400,
-    damping: 35,
-    mass: 1,
-  }
+  const springTransition: Transition = smoothSpring
 
   const forcedTheme = theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : ''
 
@@ -73,9 +69,9 @@ export const InlineAction: React.FC<InlineActionProps> = ({
               {status === 'idle' && (
                 <motion.button
                   key="idle"
-                  initial={{ opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, filter: 'blur(4px)' }}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
                   onClick={handleTrigger}
                   className="w-full rounded-full whitespace-nowrap text-[13px] font-bold text-[#000000] transition-colors sm:text-[15px] dark:text-white"
                   type="button"
@@ -87,9 +83,9 @@ export const InlineAction: React.FC<InlineActionProps> = ({
               {status === 'loading' && (
                 <motion.div
                   key="loading"
-                  initial={{ opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, filter: 'blur(4px)' }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   className="w-full"
                 >
                   <div className="relative h-1.5 flex-1 rounded-full bg-zinc-300 dark:bg-zinc-600">
@@ -111,9 +107,9 @@ export const InlineAction: React.FC<InlineActionProps> = ({
               {status === 'success' && (
                 <motion.div
                   key="success"
-                  initial={{ filter: 'blur(4px)', opacity: 0 }}
-                  animate={{ filter: 'blur(0px)', opacity: 1 }}
-                  exit={{ filter: 'blur(4px)', opacity: 0 }}
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
                   className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#050505] transition-colors dark:bg-white"
                 >
                   <motion.div

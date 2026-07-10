@@ -5,6 +5,7 @@ import { BsReceipt } from 'react-icons/bs'
 import { Person, Category, OCRResult } from '../../types'
 import { OCRUpload } from './OCRUpload'
 import { Combobox1 } from '../ui/combobox-01'
+import { smoothEase, smoothSpring } from '../../lib/motion'
 
 interface AddExpenseProps {
   people: Person[]
@@ -141,8 +142,8 @@ export function AddExpense({ people, categories, onSubmit, onClose }: AddExpense
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="keyboard-safe-sheet safe-bottom w-full rounded-t-3xl bg-white px-5 pt-5 shadow-2xl shadow-black/20"
+        transition={smoothSpring}
+        className="keyboard-safe-sheet safe-bottom w-full transform-gpu rounded-t-3xl bg-white px-5 pt-5 shadow-2xl shadow-black/20 will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">

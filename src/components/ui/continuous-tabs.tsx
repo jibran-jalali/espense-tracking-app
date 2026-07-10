@@ -1,5 +1,6 @@
 import { useEffect, useState, type FC } from 'react'
 import { LayoutGroup, motion } from 'motion/react'
+import { smoothSpring } from '../../lib/motion'
 
 interface TabItem {
   id: string
@@ -54,12 +55,7 @@ export const ContinuousTabs: FC<ContinuousTabsProps> = ({
               {isActive && (
                 <motion.div
                   layoutId="active-pill"
-                  transition={{
-                    type: 'spring',
-                    stiffness: 380,
-                    damping: 30,
-                    mass: 0.9,
-                  }}
+                  transition={smoothSpring}
                   className="bg-foreground absolute inset-0 rounded-lg shadow-xs"
                 />
               )}

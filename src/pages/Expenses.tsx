@@ -6,6 +6,7 @@ import { useTransactions, usePeople } from '../hooks/useExpenses'
 import { ExpenseList } from '../components/expenses/ExpenseList'
 import { MorphingButton } from '../components/ui/MorphingButton'
 import { Calendar5, type DateRange } from '../components/ui/calendar-05'
+import { smoothEase } from '../lib/motion'
 
 export function Expenses() {
   const { transactions, loading, remove } = useTransactions()
@@ -94,7 +95,7 @@ export function Expenses() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ type: 'spring', bounce: 0, duration: 0.45 }}
+              transition={smoothEase}
               className="overflow-hidden"
             >
               <div className="pt-4">

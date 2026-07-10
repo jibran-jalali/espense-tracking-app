@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { MoreHorizontal, Copy } from 'lucide-react'
+import { smoothSpring, smoothEase } from '../../lib/motion'
 
 export interface CarouselCard {
   id: string
@@ -37,14 +38,14 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
         onClick={handleBackgroundClick}
       >
         <div className="w-full max-w-[26.25rem]">
-          <motion.div layout className="flex flex-col gap-3">
+          <motion.div layout transition={smoothSpring} className="flex flex-col gap-3">
             <AnimatePresence mode="popLayout">
               {activeCard && (
                 <motion.div
                   key={activeCard.id}
                   layoutId={activeCard.id}
-                  className={`relative flex w-full min-h-[10.625rem] flex-col justify-between rounded-[28px] p-4 text-white shadow-2xl sm:h-48 sm:rounded-[32px] sm:p-5 ${activeCard.color}`}
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  className={`relative flex w-full min-h-[10.625rem] transform-gpu flex-col justify-between rounded-[28px] p-4 text-white shadow-2xl will-change-transform sm:h-48 sm:rounded-[32px] sm:p-5 ${activeCard.color}`}
+                  transition={smoothSpring}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-11 sm:w-11">
@@ -54,6 +55,7 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
                     <motion.button
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
+                      transition={smoothEase}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
@@ -92,6 +94,7 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
 
             <motion.div
               layout
+              transition={smoothSpring}
               className={`grid gap-2 transition-all duration-500 sm:gap-3 ${activeId ? 'grid-cols-3' : 'grid-cols-2'}`}
             >
               {(activeId ? secondaryCards : cards).map((card) => (
@@ -102,8 +105,8 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
                     e.stopPropagation()
                     setActiveId(card.id)
                   }}
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                  className={`relative flex cursor-pointer flex-col justify-between rounded-[22px] p-3 text-white shadow-lg sm:rounded-[28px] sm:p-4 ${card.color} ${activeId ? 'h-24 sm:h-28' : 'h-28 sm:h-32'}`}
+                  transition={smoothSpring}
+                  className={`relative flex transform-gpu cursor-pointer flex-col justify-between rounded-[22px] p-3 text-white shadow-lg will-change-transform sm:rounded-[28px] sm:p-4 ${card.color} ${activeId ? 'h-24 sm:h-28' : 'h-28 sm:h-32'}`}
                 >
                   <div className="flex items-start justify-between">
                     <card.icon size={activeId ? 20 : 28} className="shrink-0" />

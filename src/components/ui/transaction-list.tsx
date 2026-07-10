@@ -7,6 +7,7 @@ import {
 } from 'motion/react'
 import { ArrowRight, Trash2, X } from 'lucide-react'
 import useMeasure from 'react-use-measure'
+import { smoothEase, smoothSpring } from '../../lib/motion'
 
 export interface TransactionListItem {
   id: string
@@ -39,14 +40,11 @@ function colorWithAlpha(color: string | undefined, alpha: number) {
 }
 
 const springConfig: Transition = {
-  type: 'spring',
-  bounce: 0,
-  duration: 0.6,
+  ...smoothSpring,
 }
 
 const opacityConfig: Transition = {
-  duration: 0.4,
-  ease: [0.19, 1, 0.22, 1],
+  ...smoothEase,
 }
 
 export function TransactionList({
@@ -68,6 +66,7 @@ export function TransactionList({
       <motion.div
         className="theme-injected bg-muted border-border w-full overflow-hidden rounded-2xl border shadow-sm"
         animate={{ height: bounds.height > 0 ? bounds.height : 'auto' }}
+        transition={smoothEase}
       >
         <div className="p-3" ref={ref}>
           <AnimatePresence mode="popLayout">
@@ -132,7 +131,7 @@ function TransactionItem({
   return (
     <div className="flex w-full cursor-pointer gap-2 rounded-xl p-1 transition-colors hover:bg-background/70" onClick={onClick}>
       <motion.div
-        className="flex size-10 shrink-0 items-center justify-center rounded-lg shadow-sm"
+        className="flex size-10 shrink-0 transform-gpu items-center justify-center rounded-lg shadow-sm will-change-transform"
         style={{ backgroundColor: accentColor }}
         layoutId={`icon-${data.id}`}
         layout="position"
@@ -191,7 +190,7 @@ function TransactionItemExpanded({
       >
         <div className="flex justify-between">
           <motion.div
-            className="flex size-11 items-center justify-center rounded-xl shadow-sm"
+            className="flex size-11 transform-gpu items-center justify-center rounded-xl shadow-sm will-change-transform"
             style={{ backgroundColor: accentColor }}
             layoutId={`icon-${data.id}`}
             layout="position"
