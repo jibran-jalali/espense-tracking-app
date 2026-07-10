@@ -18,7 +18,7 @@ const { Pool } = pkg
 const app = express()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'flowly-secret-change-in-production'
-const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct'
+const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b'
 const GROQ_VISION_FALLBACK_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/admin/google/callback`
@@ -602,7 +602,7 @@ Rules:
     try {
       completion = await createCompletion(GROQ_VISION_MODEL)
     } catch (error) {
-      if (error?.code !== 'model_not_found' || GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL) throw error
+      if (!['model_not_found', 'invalid_request_error'].includes(error?.code) || GROQ_VISION_MODEL === GROQ_VISION_FALLBACK_MODEL) throw error
       completion = await createCompletion(GROQ_VISION_FALLBACK_MODEL)
     }
 
